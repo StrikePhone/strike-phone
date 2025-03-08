@@ -9,8 +9,10 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
-    },
+      "supportsTablet": true,
+    "infoPlist": {
+    "NSCameraUsageDescription": "This app requires access to the camera for strike zone detection."
+  }},
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -32,10 +34,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "react-native-vision-camera"
     ],
     "experiments": {
       "typedRoutes": true
     }
+    
   }
+  
 }

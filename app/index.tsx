@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { Button, StyleSheet, Text, View, Image } from "react-native";
 import * as FileSystem from "expo-file-system";
 
-const API_ENDPOINT = "https://ahdkqrabhc.execute-api.us-east-1.amazonaws.com/prod"; // Update if needed
+const API_ENDPOINT = "https://ahdkqrabhc.execute-api.us-east-1.amazonaws.com/prod";
 
 export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -11,6 +11,7 @@ export default function App() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [debugMessage, setDebugMessage] = useState("Initializing...");
   const [personDetected, setPersonDetected] = useState<boolean | null>(null);
+  const [strikeZone, setStrikeZone] = useState<any>(null);
 
   if (!permission) return null;
   if (!permission.granted) {
@@ -36,7 +37,6 @@ export default function App() {
         setPhotoUri(photo.uri);
         setDebugMessage("⏳ Requesting upload URL...");
 
-        // Step 1: Get Pre-Signed URL
         const { upload_url, file_name } = await getPresignedUrl();
 
         if (upload_url && file_name) {
@@ -61,30 +61,21 @@ export default function App() {
     }
   };
 
-  // Step 1: Get Pre-Signed URL
   const getPresignedUrl = async () => {
     try {
-        console.log("🌐 Requesting upload URL...");
-        const response = await fetch(`${API_ENDPOINT}/get-upload-url`, { method: "GET" });
+      const response = await fetch(`${API_ENDPOINT}/get-upload-url`, { method: "GET" });
 
-        console.log("📥 Response Status:", response.status); // Logs HTTP status
+      if (!response.ok) {
+        throw new Error(`HTTP Error! Status: ${response.status}`);
+      }
 
-        if (!response.ok) {
-            throw new Error(`HTTP Error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("✅ Upload URL received:", data); // Logs response data
-
-        return data; // Returns { upload_url, file_name }
+      return await response.json();
     } catch (error) {
-        console.error("❌ Error fetching pre-signed URL:", error);
-        return {};
+      console.error("❌ Error fetching pre-signed URL:", error);
+      return {};
     }
-};
+  };
 
-
-  // Step 2: Upload Image to S3
   const uploadToS3 = async (uploadUrl: string, fileUri: string) => {
     try {
       const response = await FileSystem.uploadAsync(uploadUrl, fileUri, {
@@ -100,7 +91,6 @@ export default function App() {
     }
   };
 
-  // Step 3: Send Image Filename to AWS Lambda for Processing
   const sendToAWSLambda = async (fileName: string) => {
     try {
       const response = await fetch(`${API_ENDPOINT}/detect-person`, {
@@ -111,6 +101,7 @@ export default function App() {
 
       const result = await response.json();
       setPersonDetected(result.person_detected);
+      setStrikeZone(result.strike_zone);
       setDebugMessage(result.person_detected ? "✅ Person Detected!" : "❌ No Person Found.");
     } catch (error) {
       console.error("Error contacting AWS:", error);
@@ -126,6 +117,7 @@ export default function App() {
           <Text style={styles.resultText}>
             {personDetected === null ? "🤔 Detecting..." : personDetected ? "✅ Person Detected!" : "❌ No Person Found."}
           </Text>
+          {strikeZone && <StrikeZoneBox strikeZone={strikeZone} />}
           <Button title="🔄 Take another picture" onPress={() => setPhotoUri(null)} />
         </>
       ) : (
@@ -138,6 +130,20 @@ export default function App() {
     </View>
   );
 }
+
+const StrikeZoneBox = ({ strikeZone }: { strikeZone: any }) => (
+  <View
+    style={{
+      position: "absolute",
+      left: strikeZone.left * 300,
+      top: strikeZone.top * 400,
+      width: (strikeZone.right - strikeZone.left) * 300,
+      height: (strikeZone.bottom - strikeZone.top) * 400,
+      borderColor: "red",
+      borderWidth: 3,
+    }}
+  />
+);
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" },
