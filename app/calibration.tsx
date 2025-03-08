@@ -1,28 +1,27 @@
-import {
-  CameraType,
-  CameraView,
-  useCameraPermissions,
-} from "expo-camera";
+import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
 import { useRef, useState } from "react";
-import {
-  Button,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-} from "react-native";
-import { Image } from "expo-image";
-import { FontAwesome6 } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system";
-import { INSERT_HELLO_WORLD } from "./config";
+import { Button, StyleSheet, Text, View, Image, Pressable } from "react-native";
+import { AntDesign } from "@expo/vector-icons";
+import AWS from 'aws-sdk';
+import { ACCESS_KEY_ID } from "./config";
+import { SECRET_ACCESS_KEY } from "./config";
+
+
+
+// AWS Config
+const s3 = new AWS.S3({
+  accessKeyId: ACCESS_KEY_ID,
+  secretAccessKey: SECRET_ACCESS_KEY,
+  region: "us-east-1",
+  signatureVersion: "v4"
+});
+
+const BUCKET_NAME = "calibration-bucket-klak";
 
 export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
-  const ref = useRef<CameraView>(null);
-  const [facing, setFacing] = useState<CameraType>("back");
-  const [base64String, setBase64String] = useState<string | null>(null);
-  const [responseString, setResponseString] = useState<string | null>(null);
+  const cameraRef = useRef<CameraView>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   if (!permission) {
     return null;
@@ -39,76 +38,94 @@ export default function App() {
     );
   }
 
+  // takes a picture and uploads it
   const takePicture = async () => {
-    try {
-      const photo = await ref.current?.takePictureAsync({ base64: true });
+    if (!cameraRef.current) {
+      console.log("Camera not ready!");
+      return;
+    }
 
-      if (photo?.base64) {
-        setBase64String(photo.base64);
-        sendToLambda(photo.base64);
+    try {
+      console.log("Taking picture...");
+      const photo = await cameraRef.current.takePictureAsync();
+
+      if (photo?.uri) {
+        setPhotoUri(photo.uri);
+        console.log("Requesting upload URL...");
+
+
+        console.log("Uploading to S3...");
+        const success = await uploadToS3(photo.uri);
+
+          if (success) {
+            console.log("Processing image...");
+          } else {
+            console.log("Upload failed.");
+          }
+        } 
+       else {
+        console.log("No valid photo taken.");
       }
-    } catch (error) {
-      console.error("Error taking picture:", error);
+    } catch (err) {
+      console.error("Error processing image:", err);
+      console.log("Error processing image.");
     }
   };
 
-  const sendToLambda = async (base64: string) => {
+
+  const uploadToS3 = async (fileUri: string) => {
     try {
-      const response = await fetch(INSERT_HELLO_WORLD, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: base64, // Sending raw Base64 string as the request body
-      });
-
-      const responseText = await response.text();
-      setResponseString(responseText);
-    } catch (error) {
-      console.error("Error sending data to Lambda:", error);
+      console.log("Uploading file:", fileUri);
+  
+      // Fetch the file as a blob
+      const response = await fetch(fileUri);
+      const blob = await response.blob();
+  
+      // Generate a unique file name
+      const fileName = `uploads/${Date.now()}.jpg`;
+  
+      const params = {
+        Bucket: BUCKET_NAME,
+        Key: fileName,
+        Body: blob,
+        ContentType: "image/jpeg",
+      };
+  
+      console.log("Uploading to S3...");
+      await s3.upload(params).promise();
+      console.log("Upload successful:", fileName);
+  
+      return true;
+    } catch (err) {
+      console.error("Error uploading to S3:", err);
+      return false;
     }
   };
 
-  const toggleFacing = () => {
-    setFacing((prev) => (prev === "back" ? "front" : "back"));
+
+
+  const renderCamera = () => {
+    return (
+      <CameraView
+        style={styles.camera}
+        ref={cameraRef}
+        mode="picture"
+        facing={"back"}
+        mute={false}
+        responsiveOrientationWhenOrientationLocked
+      >
+        <View style={styles.shutterContainer}>
+          <Pressable onPress={takePicture}>
+            <AntDesign name="picture" size={32} color="white" />
+          </Pressable>
+        </View>
+      </CameraView>
+    );
   };
 
   return (
     <View style={styles.container}>
-      {base64String && responseString ? (
-        <ScrollView>
-          <Text style={styles.text}>Modified Base64 String:</Text>
-          <Text style={styles.response}>{responseString}</Text>
-          <Button title="Take Another Picture" onPress={() => {
-            setBase64String(null);
-            setResponseString(null);
-          }} />
-        </ScrollView>
-      ) : (
-        <CameraView
-          style={styles.camera}
-          ref={ref}
-          facing={facing}
-          mute={false}
-          responsiveOrientationWhenOrientationLocked
-        >
-          <View style={styles.shutterContainer}>
-            <Pressable onPress={takePicture}>
-              {({ pressed }) => (
-                <View
-                  style={[
-                    styles.shutterBtn,
-                    { opacity: pressed ? 0.5 : 1 },
-                  ]}
-                >
-                  <View style={styles.shutterBtnInner} />
-                </View>
-              )}
-            </Pressable>
-            <Pressable onPress={toggleFacing}>
-              <FontAwesome6 name="rotate-left" size={32} color="white" />
-            </Pressable>
-          </View>
-        </CameraView>
-      )}
+      {renderCamera()}
     </View>
   );
 }
@@ -124,18 +141,6 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
   },
-  text: {
-    fontSize: 18,
-    fontWeight: "bold",
-    margin: 10,
-  },
-  response: {
-    fontSize: 14,
-    padding: 10,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 10,
-    margin: 10,
-  },
   shutterContainer: {
     position: "absolute",
     bottom: 44,
@@ -145,21 +150,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 30,
-  },
-  shutterBtn: {
-    backgroundColor: "transparent",
-    borderWidth: 5,
-    borderColor: "white",
-    width: 85,
-    height: 85,
-    borderRadius: 45,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shutterBtnInner: {
-    width: 70,
-    height: 70,
-    borderRadius: 50,
-    backgroundColor: "white",
   },
 });
