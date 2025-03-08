@@ -1,90 +1,136 @@
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { useState } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
-
-export default function CameraScreen(): JSX.Element {
-  const [facing, setFacing] = useState<CameraType>('back');
-  const [permission, requestPermission] = useCameraPermissions();
-  const router = useRouter();
-
-  if (!permission) return <View />;
-  if (!permission.granted) {
+import {
+    CameraType,
+    CameraView,
+    useCameraPermissions,
+  } from "expo-camera";
+  import { useRef, useState } from "react";
+  import { Button, Pressable, StyleSheet, Text, View } from "react-native";
+  import { Video, ResizeMode } from "expo-av"; // Import ResizeMode to fix error
+  import { FontAwesome6 } from "@expo/vector-icons";
+  
+  export default function App() {
+    const [permission, requestPermission] = useCameraPermissions();
+    const ref = useRef<CameraView>(null);
+    const [facing, setFacing] = useState<CameraType>("back");
+    const [recording, setRecording] = useState(false);
+    const [videoUri, setVideoUri] = useState<string | null>(null);
+  
+    if (!permission) return null;
+  
+    if (!permission.granted) {
+      return (
+        <View style={styles.container}>
+          <Text style={{ textAlign: "center" }}>
+            We need your permission to use the camera
+          </Text>
+          <Button onPress={requestPermission} title="Grant permission" />
+        </View>
+      );
+    }
+  
+    const recordVideo = async () => {
+      if (recording) {
+        setRecording(false);
+        ref.current?.stopRecording();
+        return;
+      }
+  
+      setRecording(true);
+      const video = await ref.current?.recordAsync();
+      if (video?.uri) {
+        setVideoUri(video.uri);
+        setRecording(false);
+      }
+    };
+  
+    const toggleFacing = () => {
+      setFacing((prev) => (prev === "back" ? "front" : "back"));
+    };
+  
     return (
       <View style={styles.container}>
-        <Text style={styles.message}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="Grant Permission" />
+        {videoUri ? (
+          <View style={styles.videoContainer}>
+            <Video
+              source={{ uri: videoUri }}
+              style={styles.video}
+              useNativeControls
+              resizeMode={ResizeMode.CONTAIN} // Fixed resizeMode issue
+              isLooping
+              shouldPlay
+            />
+            <Button title="Record Again" onPress={() => setVideoUri(null)} />
+          </View>
+        ) : (
+          <CameraView
+            style={styles.camera}
+            ref={ref}
+            mode="video"
+            facing={facing}
+            mute={false}
+            responsiveOrientationWhenOrientationLocked
+          >
+            <View style={styles.controls}>
+              <Pressable onPress={recordVideo}>
+                {({ pressed }) => (
+                  <View
+                    style={[
+                      styles.shutterBtn,
+                      {
+                        opacity: pressed ? 0.5 : 1,
+                        backgroundColor: recording ? "red" : "white",
+                      },
+                    ]}
+                  />
+                )}
+              </Pressable>
+              <Pressable onPress={toggleFacing}>
+                <FontAwesome6 name="rotate-left" size={32} color="white" />
+              </Pressable>
+            </View>
+          </CameraView>
+        )}
       </View>
     );
   }
-
-  function toggleCameraFacing(): void {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  }
-
-  return (
-    <View style={styles.container}>
-      <CameraView style={styles.camera} facing={'back'}>
-        {/* Red Box with 20% Opacity */}
-        <View style={styles.redBox} />
-
-        {/* Home Button in Top Left */}
-        <TouchableOpacity style={styles.homeButton} onPress={() => router.push('/')}>
-          <Text style={styles.buttonText}>🏠 Home</Text>
-        </TouchableOpacity>
-
-      </CameraView>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  message: {
-    textAlign: 'center',
-    paddingBottom: 10,
-  },
-  camera: {
-    flex: 1,
-  },
-  redBox: {
-    position: 'absolute',
-    top: '30%',  // Adjust this based on where you want the box to appear
-    left: '40%', // Adjust for centering the box
-    width: '45%', // Adjust the width
-    height: '35%', // Adjust the height
-    backgroundColor: 'rgba(255, 0, 0, 0.2)', // 20% opacity red box
-  },
-  homeButton: {
-    position: 'absolute',
-    top: 40, // Adjust for safe area
-    left: 20,
-    backgroundColor: 'rgba(255, 0, 0, 0.7)', // Semi-transparent red
-    padding: 10,
-    borderRadius: 10,
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  buttonContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: 'transparent',
-    margin: 64,
-  },
-  button: {
-    flex: 1,
-    alignSelf: 'flex-end',
-    alignItems: 'center',
-  },
-  text: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-});
+  
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "#000",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    camera: {
+      flex: 1,
+      width: "100%",
+    },
+    controls: {
+      position: "absolute",
+      bottom: 44,
+      left: 0,
+      width: "100%",
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 30,
+    },
+    shutterBtn: {
+      width: 85,
+      height: 85,
+      borderRadius: 45,
+      borderWidth: 5,
+      borderColor: "white",
+    },
+    videoContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      width: "100%",
+    },
+    video: {
+      width: "90%",
+      height: "60%",
+    },
+  });
+  
