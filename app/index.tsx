@@ -27,14 +27,17 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <CameraView style={styles.camera} facing={facing}>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-            <Text style={styles.text}>Flip Camera</Text>
-          </TouchableOpacity>
-        </View>
-      </CameraView>
-    </View>
+    <CameraView style={styles.camera} facing={facing}>
+      {/* Red Rectangle Overlay */}
+      <View style={styles.overlay} />
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
+          <Text style={styles.text}>Flip Camera</Text>
+        </TouchableOpacity>
+      </View>
+    </CameraView>
+  </View>
   );
 }
 
@@ -49,6 +52,15 @@ const styles = StyleSheet.create({
   },
   camera: {
     flex: 1,
+  },
+  overlay: {
+    position: 'absolute',
+    top: '25%', // Adjust to place in the middle
+    left: '30%', // Center horizontally
+    width: '40%', // Width of the rectangle
+    height: '40%', // Height of the rectangle
+    backgroundColor: 'red',
+    opacity: 0.4, // 20% opacity
   },
   buttonContainer: {
     flex: 1,
