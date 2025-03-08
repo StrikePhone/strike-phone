@@ -9,12 +9,13 @@ import {
   import { FontAwesome6 } from "@expo/vector-icons";
   
   export default function App() {
+    // Variable declaration
     const [permission, requestPermission] = useCameraPermissions();
     const ref = useRef<CameraView>(null);
     const [facing, setFacing] = useState<CameraType>("back");
     const [recording, setRecording] = useState(false);
     const [videoUri, setVideoUri] = useState<string | null>(null);
-  
+    
     if (!permission) return null;
   
     if (!permission.granted) {

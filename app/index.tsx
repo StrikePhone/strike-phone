@@ -4,12 +4,13 @@ import { useRouter } from 'expo-router';
 export default function HomeScreen(): JSX.Element {
   const router = useRouter();
 
+  // Returns the menu, has buttons that go to calibration.tsx and playball.tsx
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Strikephone</Text>
       <TouchableOpacity
         style={styles.goToCameraButton}
-        onPress={() => router.push('/camera')}
+        onPress={() => router.push('/playball')}
       >
         <Text style={styles.buttonText}>Play Ball!</Text>
       </TouchableOpacity>
