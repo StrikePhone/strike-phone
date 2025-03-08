@@ -1,81 +1,50 @@
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { useState } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 
-export default function App() {
-  const [facing, setFacing] = useState<CameraType>('back');
-  const [permission, requestPermission] = useCameraPermissions();
-
-  if (!permission) {
-    // Camera permissions are still loading.
-    return <View />;
-  }
-
-  if (!permission.granted) {
-    // Camera permissions are not granted yet.
-    return (
-      <View style={styles.container}>
-        <Text style={styles.message}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="grant permission" />
-      </View>
-    );
-  }
-
-  function toggleCameraFacing() {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  }
+export default function HomeScreen(): JSX.Element {
+  const router = useRouter();
 
   return (
     <View style={styles.container}>
-    <CameraView style={styles.camera} facing={facing}>
-      {/* Red Rectangle Overlay */}
-      <View style={styles.overlay} />
-
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-          <Text style={styles.text}>Flip Camera</Text>
-        </TouchableOpacity>
-      </View>
-    </CameraView>
-  </View>
+      <Text style={styles.text}>Strikephone</Text>
+      <TouchableOpacity
+        style={styles.goToCameraButton}
+        onPress={() => router.push('/camera')}
+      >
+        <Text style={styles.buttonText}>Play Ball!</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.goToCameraButton}
+        onPress={() => router.push('/calibration')}
+      >
+        <Text style={styles.buttonText}>Calibration</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-  },
-  message: {
-    textAlign: 'center',
-    paddingBottom: 10,
-  },
-  camera: {
-    flex: 1,
-  },
-  overlay: {
-    position: 'absolute',
-    top: '25%', // Adjust to place in the middle
-    left: '30%', // Center horizontally
-    width: '40%', // Width of the rectangle
-    height: '40%', // Height of the rectangle
-    backgroundColor: 'red',
-    opacity: 0.4, // 20% opacity
-  },
-  buttonContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: 'transparent',
-    margin: 64,
-  },
-  button: {
-    flex: 1,
-    alignSelf: 'flex-end',
+    justifyContent: 'flex-start',
+    marginTop: 30,
     alignItems: 'center',
   },
   text: {
-    fontSize: 24,
+    fontSize: 40,
     fontWeight: 'bold',
-    color: 'white',
+  },
+  goToCameraButton: {
+    backgroundColor: '#3d5dff', // Blue color
+    paddingVertical: 20,         // Vertical padding
+    paddingHorizontal: 80,       // Horizontal padding
+    borderRadius: 5,            // Rounded corners
+    marginTop: 40,               // Space from text
+  },
+  buttonText: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    color: 'white',              // White text color
+    textAlign: 'center',
   },
 });
