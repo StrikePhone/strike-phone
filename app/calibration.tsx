@@ -1,90 +1,125 @@
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { useState } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
-
-export default function CameraScreen(): JSX.Element {
-  const [facing, setFacing] = useState<CameraType>('back');
-  const [permission, requestPermission] = useCameraPermissions();
-  const router = useRouter();
-
-  if (!permission) return <View />;
-  if (!permission.granted) {
+import {
+    CameraType,
+    CameraView,
+    useCameraPermissions,
+  } from "expo-camera";
+  import { useRef, useState } from "react";
+  import { Button, Pressable, StyleSheet, Text, View } from "react-native";
+  import { Image } from "expo-image";
+  import { FontAwesome6 } from "@expo/vector-icons";
+  
+  export default function App() {
+    const [permission, requestPermission] = useCameraPermissions();
+    const ref = useRef<CameraView>(null);
+    const [facing, setFacing] = useState<CameraType>("back");
+    const [uri, setUri] = useState<string | null>(null);
+  
+    if (!permission) {
+      return null;
+    }
+  
+    if (!permission.granted) {
+      return (
+        <View style={styles.container}>
+          <Text style={{ textAlign: "center" }}>
+            We need your permission to use the camera
+          </Text>
+          <Button onPress={requestPermission} title="Grant permission" />
+        </View>
+      );
+    }
+  
+    const takePicture = async () => {
+      const photo = await ref.current?.takePictureAsync();
+      if (photo?.uri) {
+        setUri(photo.uri);
+      }
+    };
+  
+    const toggleFacing = () => {
+      setFacing((prev) => (prev === "back" ? "front" : "back"));
+    };
+  
     return (
       <View style={styles.container}>
-        <Text style={styles.message}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="Grant Permission" />
+        {uri ? (
+          <View>
+            <Image source={{ uri }} style={styles.image} />
+            <Button title="Take another picture" onPress={() => setUri(null)} />
+          </View>
+        ) : (
+          <CameraView
+            style={styles.camera}
+            ref={ref}
+            facing={facing}
+            mute={false}
+            responsiveOrientationWhenOrientationLocked
+          >
+            <View style={styles.shutterContainer}>
+              <Pressable onPress={takePicture}>
+                {({ pressed }) => (
+                  <View
+                    style={[
+                      styles.shutterBtn,
+                      { opacity: pressed ? 0.5 : 1 },
+                    ]}
+                  >
+                    <View style={styles.shutterBtnInner} />
+                  </View>
+                )}
+              </Pressable>
+              <Pressable onPress={toggleFacing}>
+                <FontAwesome6 name="rotate-left" size={32} color="white" />
+              </Pressable>
+            </View>
+          </CameraView>
+        )}
       </View>
     );
   }
-
-  function toggleCameraFacing(): void {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  }
-
-  return (
-    <View style={styles.container}>
-      <CameraView style={styles.camera} facing={'back'}>
-        {/* Red Box with 20% Opacity */}
-        <View style={styles.redBox} />
-
-        {/* Home Button in Top Left */}
-        <TouchableOpacity style={styles.homeButton} onPress={() => router.push('/')}>
-          <Text style={styles.buttonText}>🏠 Home</Text>
-        </TouchableOpacity>
-
-      </CameraView>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  message: {
-    textAlign: 'center',
-    paddingBottom: 10,
-  },
-  camera: {
-    flex: 1,
-  },
-  redBox: {
-    position: 'absolute',
-    top: '30%',  // Adjust this based on where you want the box to appear
-    left: '40%', // Adjust for centering the box
-    width: '45%', // Adjust the width
-    height: '35%', // Adjust the height
-    backgroundColor: 'rgba(255, 0, 0, 0.2)', // 20% opacity red box
-  },
-  homeButton: {
-    position: 'absolute',
-    top: 40, // Adjust for safe area
-    left: 20,
-    backgroundColor: 'rgba(255, 0, 0, 0.7)', // Semi-transparent red
-    padding: 10,
-    borderRadius: 10,
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  buttonContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: 'transparent',
-    margin: 64,
-  },
-  button: {
-    flex: 1,
-    alignSelf: 'flex-end',
-    alignItems: 'center',
-  },
-  text: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-});
+  
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "#fff",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    camera: {
+      flex: 1,
+      width: "100%",
+    },
+    image: {
+      width: 300,
+      height: 300,
+      borderRadius: 10,
+      marginBottom: 10,
+    },
+    shutterContainer: {
+      position: "absolute",
+      bottom: 44,
+      left: 0,
+      width: "100%",
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 30,
+    },
+    shutterBtn: {
+      backgroundColor: "transparent",
+      borderWidth: 5,
+      borderColor: "white",
+      width: 85,
+      height: 85,
+      borderRadius: 45,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    shutterBtnInner: {
+      width: 70,
+      height: 70,
+      borderRadius: 50,
+      backgroundColor: "white",
+    },
+  });
+  
