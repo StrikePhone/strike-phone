@@ -7,6 +7,7 @@ import { useRef, useState, useEffect } from "react";
 import { Button, Pressable, StyleSheet, Text, View } from "react-native";
 import { ACCESS_KEY_ID, SECRET_ACCESS_KEY } from "./config";
 import AWS from "aws-sdk";
+import { Audio } from 'expo-av';
 
 // AWS Config for S3
 const s3 = new AWS.S3({
@@ -128,11 +129,28 @@ export default function App() {
     setJsonMessage("No JSON data found");
   };
 
+  const playAudio = async (file: string) => {
+    const { sound } = await Audio.Sound.createAsync(
+      file === "Strike" ? require("./audio-files/strikeAudio.mp3") : require("./audio-files/ballAudio.mp3")
+    );
+    await sound.playAsync();
+  };
+  
   const getStatusMessage = () => {
     if (jsonData?.status) {
-      return jsonData.status === "Strike" ? "Strike!" : jsonData.status === "Ball" ? "Ball!" : "No JSON data found";
+      if (jsonData.status === "Strike"){
+        playAudio("Strike")
+        return "Strike!"
+      }else if (jsonData.status == "Ball"){
+        playAudio("Ball")
+        return "Ball!"
+      }
+      else{
+        return "No json data found :C"
+      }
+      //return jsonData.status === "Strike" ? "Strike!" : jsonData.status === "Ball" ? "Ball!" : "No JSON data found";
     }
-    return jsonMessage;
+    //return jsonMessage;
   };
 
   return (
