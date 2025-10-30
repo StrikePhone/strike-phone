@@ -2,7 +2,4 @@
 
 Our CUHackit 2025 Project!
 Members:
-Kathleen Kirk
-Life Rouby
-Aarav Chowbey
-Kenny Sun
+Kathleen Kirk, Life Rouby, Aarav Chowbey, Kenny Sun
